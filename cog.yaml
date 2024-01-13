@@ -1,0 +1,10 @@
+build:
+  gpu: true
+  python_version: "3.11"
+  python_packages:
+    - "torch==2.0.1"
+    - "torchvision"
+    - "transformers==4.36.0"
+    - "einops"
+
+predict: "predict.py:Predictor"
