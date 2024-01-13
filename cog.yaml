@@ -6,5 +6,7 @@ build:
     - "torchvision"
     - "transformers==4.36.0"
     - "einops"
+    - "bitsandbytes"
+    - "accelerate"
 
 predict: "predict.py:Predictor"
