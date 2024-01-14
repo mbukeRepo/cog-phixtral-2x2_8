@@ -5,9 +5,21 @@ from cog import BasePredictor, Input
 import time
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from tensorizer import TensorDeserializer
+from tensorizer.utils import no_init_or_tensor
+import logging
 
-MODEL_NAME = "mlabonne/phixtral-2x2_8"
-MODEL_CACHE = "model-cache"
+DEFAULT_MODEL = "mlabonne/phixtral-2x2_8"
+CACHE_DIR = "pretrained_weights"
+TOKENIZER_PATH = './tokenizer'
+
+# To download tensorizer weights instead of load them from a local source, `REMOTE_PATH_TO_TENSORIZER_WEIGHTS` to their URL
+REMOTE_PATH_TO_TENSORIZER_WEIGHTS = None
+PATH_TO_TENSORIZER_WEIGHTS = REMOTE_PATH_TO_TENSORIZER_WEIGHTS if REMOTE_PATH_TO_TENSORIZER_WEIGHTS else "./tensorized_models/phixtral.tensors"
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class Predictor(BasePredictor):
     def setup(self) -> None:
@@ -16,18 +28,27 @@ class Predictor(BasePredictor):
         
         print("Loading pipeline...")
         torch.set_default_device("cuda")
-        self.model = AutoModelForCausalLM.from_pretrained(
-            MODEL_NAME,
-            torch_dtype="auto",
-            trust_remote_code=True,
-            load_in_4bit=True, 
-            cache_dir=MODEL_CACHE
-        )
+        self.model = self.load_tensorizer(weights)
+        
         self.tokenizer = AutoTokenizer.from_pretrained(
-            MODEL_NAME,
-            trust_remote_code=True
+            TOKENIZER_PATH
         )
         print("setup took: ", time.time() - start)
+        
+    def load_tensorizer(self, weights):
+        st = time.time()
+        logger.info(f'deserializing weights from {weights}')
+        config = AutoConfig.from_pretrained(DEFAULT_MODEL)
+
+        model = no_init_or_tensor(
+            lambda: AutoModelForCausalLM.from_pretrained(
+                None, config=config, state_dict=OrderedDict()
+            )
+        )
+        des = TensorDeserializer(weights, plaid_mode=True)
+        des.load_into_module(model)
+        logging.info(f'weights loaded in {time.time() - st}')
+        return model
 
     @torch.inference_mode()
     def predict(

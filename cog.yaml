@@ -8,5 +8,7 @@ build:
     - "einops"
     - "bitsandbytes"
     - "accelerate"
+    - "tensorizer==1.0.1"
+    - "huggingface_hub==0.13.4"
 
 predict: "predict.py:Predictor"
